@@ -1,5 +1,5 @@
 import time
-from lx16a import LX16A, ServoTimeoutError
+from pylx16a.lx16a import LX16A, ServoTimeoutError
 
 # ---------- SETTINGS ----------
 PORT = "/dev/ttyUSB0"   # change if your adapter shows another port
