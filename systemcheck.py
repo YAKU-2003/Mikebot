@@ -1,4 +1,4 @@
-import serial
+import serial 
 import time
 
 ser = serial.Serial('/dev/ttyUSB0', 115200, timeout=0.1)
