@@ -1,19 +1,16 @@
 import time
 from pylx16a.lx16a import LX16A, ServoTimeoutError
 
-# ---------- SETTINGS ----------
-PORT = "/dev/ttyUSB0"   # change if your adapter shows another port
+PORT = "/dev/ttyUSB0"
 MOTOR_IDS = [1, 2, 3, 4, 5, 6]
 
-# Safe-ish center test positions
-CENTER = 500
-OFFSET = 80            # small motion so robot does not jerk too hard
-MOVE_TIME = 600        # milliseconds
-PAUSE = 0.8            # seconds between moves
-# -----------------------------
+CENTER = 120      # degrees, roughly center for LX-16A
+OFFSET = 12       # small safe motion
+MOVE_TIME = 700   # milliseconds
+PAUSE = 0.8
 
-def safe_move(servo, position, move_time=MOVE_TIME):
-    servo.moveTimeWrite(position, move_time)
+def safe_move(servo, angle, move_time=MOVE_TIME):
+    servo.move(angle, time=move_time)
     time.sleep(move_time / 1000 + 0.2)
 
 def test_motor(motor_id):
@@ -22,23 +19,18 @@ def test_motor(motor_id):
     try:
         servo = LX16A(motor_id)
 
-        # Move to center first
         safe_move(servo, CENTER)
-        print(f"  ID {motor_id}: moved to center ({CENTER})")
+        print(f"  ID {motor_id}: moved to center ({CENTER} deg)")
 
-        # Small positive motion
         safe_move(servo, CENTER + OFFSET)
-        print(f"  ID {motor_id}: moved to {CENTER + OFFSET}")
+        print(f"  ID {motor_id}: moved to {CENTER + OFFSET} deg")
 
-        # Back to center
         safe_move(servo, CENTER)
         print(f"  ID {motor_id}: returned to center")
 
-        # Small negative motion
         safe_move(servo, CENTER - OFFSET)
-        print(f"  ID {motor_id}: moved to {CENTER - OFFSET}")
+        print(f"  ID {motor_id}: moved to {CENTER - OFFSET} deg")
 
-        # Back to center
         safe_move(servo, CENTER)
         print(f"  ID {motor_id}: returned to center again")
 
