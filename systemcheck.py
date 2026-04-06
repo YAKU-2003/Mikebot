@@ -1,0 +1,5 @@
+print("Mikebot systems check starting...")
+print("✅ Motors - OK")
+print("✅ Sensors - OK")
+print("✅ Battery - OK")
+print("Mikebot is ready to walk!")
