@@ -1,4 +1,5 @@
 import time
+import math
 from pylx16a.lx16a import LX16A, ServoTimeoutError
 
 PORT = "/dev/ttyUSB0"
@@ -12,45 +13,41 @@ LEFT_KNEE = 5
 LEFT_ANKLE = 6
 
 # -----------------------------
-# Tuning parameters
+# Gait tuning
 # -----------------------------
-STEP_COUNT = 6
-HIP_SHIFT = 7
-KNEE_LIFT = 14
+STEP_COUNT = 8                 # number of gait cycles
+CYCLE_TIME = 1.6               # seconds per full gait cycle
+DT = 0.03                      # update interval
+
+# Motion amplitudes
+HIP_SHIFT = 5                  # reduced hip sway
+KNEE_LIFT = 12
 ANKLE_LIFT = 10
-STEP_FORWARD_EXTRA = 2
 
-SEGMENTS = 14
-SEGMENT_TIME = 0.035
-PHASE_PAUSE = 0.05
+# Hip directions
+RIGHT_HIP_OUTWARD_SIGN = +1    # motor 1: increase = outward
+LEFT_HIP_OUTWARD_SIGN = -1     # motor 4: decrease = outward
 
-# Confirmed outward directions
-RIGHT_HIP_OUTWARD_SIGN = +1
-LEFT_HIP_OUTWARD_SIGN = -1
-
-# Joint directions
+# Knee/ankle directions
 RIGHT_KNEE_SIGN = +1
 RIGHT_ANKLE_SIGN = -1
 LEFT_KNEE_SIGN = +1
-LEFT_ANKLE_SIGN = +1
+LEFT_ANKLE_SIGN = -1           # using your updated left ankle sign
 
 
 def clamp_angle(angle):
     return max(0, min(240, angle))
 
 
-def smooth_move(servos, current_pose, target_pose, segments=SEGMENTS, dt=SEGMENT_TIME):
-    for i in range(1, segments + 1):
-        alpha = i / segments
-        for name, servo in servos.items():
-            start_angle = current_pose[name]
-            end_angle = target_pose[name]
-            angle = start_angle + (end_angle - start_angle) * alpha
-            servo.move(clamp_angle(angle))
-        time.sleep(dt)
-
-    for name in current_pose:
-        current_pose[name] = target_pose[name]
+def build_servos():
+    return {
+        "right_hip": LX16A(RIGHT_HIP),
+        "right_knee": LX16A(RIGHT_KNEE),
+        "right_ankle": LX16A(RIGHT_ANKLE),
+        "left_hip": LX16A(LEFT_HIP),
+        "left_knee": LX16A(LEFT_KNEE),
+        "left_ankle": LX16A(LEFT_ANKLE),
+    }
 
 
 def read_pose(servos):
@@ -66,77 +63,38 @@ def print_pose(title, pose):
         print(f"  {k}: {v:.2f} deg")
 
 
-def build_servos():
-    return {
-        "right_hip": LX16A(RIGHT_HIP),
-        "right_knee": LX16A(RIGHT_KNEE),
-        "right_ankle": LX16A(RIGHT_ANKLE),
-        "left_hip": LX16A(LEFT_HIP),
-        "left_knee": LX16A(LEFT_KNEE),
-        "left_ankle": LX16A(LEFT_ANKLE),
-    }
+def send_pose(servos, pose):
+    for name, servo in servos.items():
+        servo.move(clamp_angle(pose[name]))
 
 
-def center_pose(start_pose):
-    return dict(start_pose)
+def smooth_move_to_pose(servos, current_pose, target_pose, duration=1.0, dt=0.03):
+    steps = max(1, int(duration / dt))
+    for i in range(1, steps + 1):
+        alpha = i / steps
+        pose = {}
+        for name in current_pose:
+            pose[name] = current_pose[name] + (target_pose[name] - current_pose[name]) * alpha
+        send_pose(servos, pose)
+        time.sleep(dt)
+
+    for name in current_pose:
+        current_pose[name] = target_pose[name]
 
 
-def right_swing_pose(base_pose):
-    pose = dict(base_pose)
-
-    # Left leg supports body
-    pose["left_hip"] = base_pose["left_hip"] + LEFT_HIP_OUTWARD_SIGN * HIP_SHIFT
-
-    # Right leg swings: knee and ankle move together
-    pose["right_knee"] = base_pose["right_knee"] + RIGHT_KNEE_SIGN * (KNEE_LIFT + STEP_FORWARD_EXTRA)
-    pose["right_ankle"] = base_pose["right_ankle"] + RIGHT_ANKLE_SIGN * ANKLE_LIFT
-
-    return pose
-
-
-def right_place_pose(base_pose):
-    pose = dict(base_pose)
-
-    # Keep support shift while placing right leg down
-    pose["left_hip"] = base_pose["left_hip"] + LEFT_HIP_OUTWARD_SIGN * HIP_SHIFT
-
-    # Bring right leg back smoothly together
-    pose["right_knee"] = base_pose["right_knee"]
-    pose["right_ankle"] = base_pose["right_ankle"]
-
-    return pose
-
-
-def left_swing_pose(base_pose):
-    pose = dict(base_pose)
-
-    # Right leg supports body
-    pose["right_hip"] = base_pose["right_hip"] + RIGHT_HIP_OUTWARD_SIGN * HIP_SHIFT
-
-    # Left leg swings: knee and ankle move together
-    pose["left_knee"] = base_pose["left_knee"] + LEFT_KNEE_SIGN * (KNEE_LIFT + STEP_FORWARD_EXTRA)
-    pose["left_ankle"] = base_pose["left_ankle"] + LEFT_ANKLE_SIGN * ANKLE_LIFT
-
-    return pose
-
-
-def left_place_pose(base_pose):
-    pose = dict(base_pose)
-
-    # Keep support shift while placing left leg down
-    pose["right_hip"] = base_pose["right_hip"] + RIGHT_HIP_OUTWARD_SIGN * HIP_SHIFT
-
-    # Bring left leg back smoothly together
-    pose["left_knee"] = base_pose["left_knee"]
-    pose["left_ankle"] = base_pose["left_ankle"]
-
-    return pose
+def leg_swing_profile(phase):
+    """
+    Smooth swing profile from 0 to 1.
+    Only active during half the cycle.
+    """
+    s = math.sin(phase)
+    return max(0.0, s)
 
 
 def main():
-    print("=== SMOOTH SUPPORTED WALKING DEMO ===")
-    print("Keep the robot lightly supported by hand for this test.")
-    print("Make sure the feet can move freely and nothing is jammed.\n")
+    print("=== FLUID SUPPORTED WALKING DEMO ===")
+    print("Robot should be lightly supported by hand.")
+    print("This version uses a smooth 50% phase-shifted gait.\n")
 
     try:
         LX16A.initialize(PORT)
@@ -151,36 +109,54 @@ def main():
         current_pose = dict(start_pose)
 
         print_pose("Starting pose:", start_pose)
-        time.sleep(1.2)
 
-        smooth_move(servos, current_pose, center_pose(start_pose))
-        time.sleep(PHASE_PAUSE)
+        # Move gently into start pose
+        smooth_move_to_pose(servos, current_pose, start_pose, duration=1.0, dt=DT)
+        time.sleep(0.5)
 
-        for step in range(STEP_COUNT):
-            print(f"\nCycle {step + 1}/{STEP_COUNT}")
+        total_time = STEP_COUNT * CYCLE_TIME
+        start_time = time.time()
 
-            # Right swing
-            smooth_move(servos, current_pose, right_swing_pose(start_pose))
-            time.sleep(PHASE_PAUSE)
+        while True:
+            t = time.time() - start_time
+            if t >= total_time:
+                break
 
-            smooth_move(servos, current_pose, right_place_pose(start_pose))
-            time.sleep(PHASE_PAUSE)
+            # Main gait phase
+            phase_r = 2 * math.pi * (t / CYCLE_TIME)
+            phase_l = phase_r + math.pi   # 50% phase offset
 
-            smooth_move(servos, current_pose, center_pose(start_pose))
-            time.sleep(PHASE_PAUSE)
+            # Swing profiles: active when sin() > 0
+            swing_r = leg_swing_profile(phase_r)
+            swing_l = leg_swing_profile(phase_l)
 
-            # Left swing
-            smooth_move(servos, current_pose, left_swing_pose(start_pose))
-            time.sleep(PHASE_PAUSE)
+            # Smooth hip sway
+            hip_r = start_pose["right_hip"] + RIGHT_HIP_OUTWARD_SIGN * HIP_SHIFT * math.sin(phase_r)
+            hip_l = start_pose["left_hip"] + LEFT_HIP_OUTWARD_SIGN * HIP_SHIFT * math.sin(phase_l)
 
-            smooth_move(servos, current_pose, left_place_pose(start_pose))
-            time.sleep(PHASE_PAUSE)
+            # Knee and ankle motion
+            # Only one leg swings strongly at a time, but the other begins halfway through the cycle
+            right_knee = start_pose["right_knee"] + RIGHT_KNEE_SIGN * KNEE_LIFT * swing_r
+            right_ankle = start_pose["right_ankle"] + RIGHT_ANKLE_SIGN * ANKLE_LIFT * swing_r
 
-            smooth_move(servos, current_pose, center_pose(start_pose))
-            time.sleep(PHASE_PAUSE)
+            left_knee = start_pose["left_knee"] + LEFT_KNEE_SIGN * KNEE_LIFT * swing_l
+            left_ankle = start_pose["left_ankle"] + LEFT_ANKLE_SIGN * ANKLE_LIFT * swing_l
+
+            pose = {
+                "right_hip": hip_r,
+                "right_knee": right_knee,
+                "right_ankle": right_ankle,
+                "left_hip": hip_l,
+                "left_knee": left_knee,
+                "left_ankle": left_ankle,
+            }
+
+            send_pose(servos, pose)
+            time.sleep(DT)
 
         print("\nWalking demo complete. Returning to start pose.")
-        smooth_move(servos, current_pose, start_pose)
+        end_pose = read_pose(servos)
+        smooth_move_to_pose(servos, end_pose, start_pose, duration=1.0, dt=DT)
         print("Done.")
 
     except ServoTimeoutError as e:
