@@ -14,22 +14,21 @@ LEFT_ANKLE = 6
 # -----------------------------
 # Tuning parameters
 # -----------------------------
-STEP_COUNT = 6              # number of full walking cycles
-HIP_SHIFT = 18              # outward shift for support leg
-KNEE_LIFT = 16              # knee bend for swing leg
-ANKLE_LIFT = 12             # ankle compensation for swing leg
-STEP_FORWARD_EXTRA = 4      # tiny extra motion to make it look more like stepping
+STEP_COUNT = 6
+HIP_SHIFT = 7
+KNEE_LIFT = 16
+ANKLE_LIFT = 12
+STEP_FORWARD_EXTRA = 4
 
-SEGMENTS = 8                # more = smoother motion
-SEGMENT_TIME = 0.05         # seconds per interpolation segment
-PHASE_PAUSE = 0.08          # tiny pause between phases
+SEGMENTS = 10
+SEGMENT_TIME = 0.04
+PHASE_PAUSE = 0.08
 
 # Confirmed outward directions
 RIGHT_HIP_OUTWARD_SIGN = +1   # increasing motor 1 angle moves outward
 LEFT_HIP_OUTWARD_SIGN = -1    # decreasing motor 4 angle moves outward
 
 # Knee/ankle directions
-# Flip signs if a joint bends the wrong way
 RIGHT_KNEE_SIGN = +1
 RIGHT_ANKLE_SIGN = -1
 LEFT_KNEE_SIGN = -1
@@ -41,10 +40,6 @@ def clamp_angle(angle):
 
 
 def smooth_move(servos, current_pose, target_pose, segments=SEGMENTS, dt=SEGMENT_TIME):
-    """
-    Smoothly interpolate from current_pose to target_pose.
-    current_pose and target_pose are dicts with same keys.
-    """
     for i in range(1, segments + 1):
         alpha = i / segments
         for name, servo in servos.items():
@@ -86,31 +81,15 @@ def center_pose(start_pose):
     return dict(start_pose)
 
 
-def shift_left_pose(base_pose):
-    pose = dict(base_pose)
-    pose["left_hip"] = base_pose["left_hip"] + LEFT_HIP_OUTWARD_SIGN * HIP_SHIFT
-    pose["right_hip"] = base_pose["right_hip"]
-    return pose
-
-
-def shift_right_pose(base_pose):
-    pose = dict(base_pose)
-    pose["right_hip"] = base_pose["right_hip"] + RIGHT_HIP_OUTWARD_SIGN * HIP_SHIFT
-    pose["left_hip"] = base_pose["left_hip"]
-    return pose
-
-
 def right_swing_pose(base_pose):
     pose = dict(base_pose)
 
-    # support stays on left leg
+    # Left leg is support leg, so left hip shifts outward
     pose["left_hip"] = base_pose["left_hip"] + LEFT_HIP_OUTWARD_SIGN * HIP_SHIFT
 
-    # right leg swings
+    # Right leg swings
     pose["right_knee"] = base_pose["right_knee"] + RIGHT_KNEE_SIGN * KNEE_LIFT
     pose["right_ankle"] = base_pose["right_ankle"] + RIGHT_ANKLE_SIGN * ANKLE_LIFT
-
-    # tiny extra accent so it looks more like stepping
     pose["right_knee"] += RIGHT_KNEE_SIGN * STEP_FORWARD_EXTRA
 
     return pose
@@ -119,10 +98,10 @@ def right_swing_pose(base_pose):
 def right_place_pose(base_pose):
     pose = dict(base_pose)
 
-    # keep support shift while placing down
+    # Keep left hip shifted while right leg comes down
     pose["left_hip"] = base_pose["left_hip"] + LEFT_HIP_OUTWARD_SIGN * HIP_SHIFT
 
-    # return right leg toward neutral
+    # Right leg returns
     pose["right_knee"] = base_pose["right_knee"]
     pose["right_ankle"] = base_pose["right_ankle"]
 
@@ -132,14 +111,12 @@ def right_place_pose(base_pose):
 def left_swing_pose(base_pose):
     pose = dict(base_pose)
 
-    # support stays on right leg
+    # Right leg is support leg, so right hip shifts outward
     pose["right_hip"] = base_pose["right_hip"] + RIGHT_HIP_OUTWARD_SIGN * HIP_SHIFT
 
-    # left leg swings
+    # Left leg swings
     pose["left_knee"] = base_pose["left_knee"] + LEFT_KNEE_SIGN * KNEE_LIFT
     pose["left_ankle"] = base_pose["left_ankle"] + LEFT_ANKLE_SIGN * ANKLE_LIFT
-
-    # tiny extra accent
     pose["left_knee"] += LEFT_KNEE_SIGN * STEP_FORWARD_EXTRA
 
     return pose
@@ -148,10 +125,10 @@ def left_swing_pose(base_pose):
 def left_place_pose(base_pose):
     pose = dict(base_pose)
 
-    # keep support shift while placing down
+    # Keep right hip shifted while left leg comes down
     pose["right_hip"] = base_pose["right_hip"] + RIGHT_HIP_OUTWARD_SIGN * HIP_SHIFT
 
-    # return left leg toward neutral
+    # Left leg returns
     pose["left_knee"] = base_pose["left_knee"]
     pose["left_ankle"] = base_pose["left_ankle"]
 
@@ -178,49 +155,34 @@ def main():
         print_pose("Starting pose:", start_pose)
         time.sleep(1.5)
 
-        # Start centered
         smooth_move(servos, current_pose, center_pose(start_pose))
         time.sleep(PHASE_PAUSE)
 
         for step in range(STEP_COUNT):
             print(f"\nCycle {step + 1}/{STEP_COUNT}")
 
-            # 1. Shift to left support
-            target = shift_left_pose(start_pose)
-            smooth_move(servos, current_pose, target)
-            time.sleep(PHASE_PAUSE)
-
-            # 2. Swing right leg
+            # Right leg swing while left hip shifts simultaneously
             target = right_swing_pose(start_pose)
             smooth_move(servos, current_pose, target)
             time.sleep(PHASE_PAUSE)
 
-            # 3. Place right leg
             target = right_place_pose(start_pose)
             smooth_move(servos, current_pose, target)
             time.sleep(PHASE_PAUSE)
 
-            # 4. Return to center
             target = center_pose(start_pose)
             smooth_move(servos, current_pose, target)
             time.sleep(PHASE_PAUSE)
 
-            # 5. Shift to right support
-            target = shift_right_pose(start_pose)
-            smooth_move(servos, current_pose, target)
-            time.sleep(PHASE_PAUSE)
-
-            # 6. Swing left leg
+            # Left leg swing while right hip shifts simultaneously
             target = left_swing_pose(start_pose)
             smooth_move(servos, current_pose, target)
             time.sleep(PHASE_PAUSE)
 
-            # 7. Place left leg
             target = left_place_pose(start_pose)
             smooth_move(servos, current_pose, target)
             time.sleep(PHASE_PAUSE)
 
-            # 8. Return to center
             target = center_pose(start_pose)
             smooth_move(servos, current_pose, target)
             time.sleep(PHASE_PAUSE)
