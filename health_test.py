@@ -1,20 +1,19 @@
 import time
 from pylx16a.lx16a import LX16A, ServoTimeoutError
 
-# ---------- SETTINGS ----------
-PORT = "/dev/ttyUSB0"   # change if your adapter shows another port
+PORT = "/dev/ttyUSB0"
 MOTOR_IDS = [1, 2, 3, 4, 5, 6]
 
-# Safe-ish center test positions
-CENTER = 500
-OFFSET = 80            # small motion so robot does not jerk too hard
-MOVE_TIME = 600        # milliseconds
-PAUSE = 0.8            # seconds between moves
-# -----------------------------
+OFFSET = 12       # degrees
+MOVE_TIME = 700   # milliseconds
+PAUSE = 0.8
 
-def safe_move(servo, position, move_time=MOVE_TIME):
-    servo.moveTimeWrite(position, move_time)
+def safe_move(servo, angle, move_time=MOVE_TIME):
+    servo.move(angle, time=move_time)
     time.sleep(move_time / 1000 + 0.2)
+
+def clamp_angle(angle):
+    return max(0, min(240, angle))
 
 def test_motor(motor_id):
     print(f"\nTesting motor ID {motor_id}...")
@@ -22,25 +21,25 @@ def test_motor(motor_id):
     try:
         servo = LX16A(motor_id)
 
-        # Move to center first
-        safe_move(servo, CENTER)
-        print(f"  ID {motor_id}: moved to center ({CENTER})")
+        # Read original position
+        original_angle = servo.get_physical_angle()
+        print(f"  ID {motor_id}: original angle = {original_angle:.2f} deg")
 
-        # Small positive motion
-        safe_move(servo, CENTER + OFFSET)
-        print(f"  ID {motor_id}: moved to {CENTER + OFFSET}")
+        # Small test move
+        forward_angle = clamp_angle(original_angle + OFFSET)
+        backward_angle = clamp_angle(original_angle - OFFSET)
 
-        # Back to center
-        safe_move(servo, CENTER)
-        print(f"  ID {motor_id}: returned to center")
+        safe_move(servo, forward_angle)
+        print(f"  ID {motor_id}: moved to {forward_angle:.2f} deg")
 
-        # Small negative motion
-        safe_move(servo, CENTER - OFFSET)
-        print(f"  ID {motor_id}: moved to {CENTER - OFFSET}")
+        safe_move(servo, original_angle)
+        print(f"  ID {motor_id}: returned to original position")
 
-        # Back to center
-        safe_move(servo, CENTER)
-        print(f"  ID {motor_id}: returned to center again")
+        safe_move(servo, backward_angle)
+        print(f"  ID {motor_id}: moved to {backward_angle:.2f} deg")
+
+        safe_move(servo, original_angle)
+        print(f"  ID {motor_id}: returned to original position again")
 
         print(f"  RESULT: ID {motor_id} PASSED")
         return True
