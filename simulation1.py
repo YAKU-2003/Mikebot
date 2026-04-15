@@ -23,8 +23,16 @@ for i in range(10000):
         print(f"Lost connection at step {i}")
         break
     p.stepSimulation()
-    time.sleep(1. / 240.)
+    time.sleep(1./240.)
 
+# Only get position if still connected
+try:
+    cubePos, cubeOrn = p.getBasePositionAndOrientation(boxId)
+    print("Final Position:", cubePos)
+    print("Final Orientation:", cubeOrn)
+    p.disconnect()
+except:
+    print("Simulation ended early - window was closed")
 cubePos, cubeOrn = p.getBasePositionAndOrientation(boxId)
 print("Final Position:", cubePos)
 print("Final Orientation:", cubeOrn)
