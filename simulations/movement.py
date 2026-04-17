@@ -32,100 +32,91 @@ left_thigh = 11
 left_knee = 13
 left_foot = 15
 
-# Stable initial pose
-right_hip_init = 0.0
-right_thigh_init = 0.05
-right_knee_init = 0.0
-right_foot_init = 0.0
+# Initial pose
+pose_stand = {
+    right_hip: 0.0,
+    right_thigh: 0.05,
+    right_knee: 0.0,
+    right_foot: 0.0,
+    left_hip: 0.0,
+    left_thigh: 0.05,
+    left_knee: 0.0,
+    left_foot: 0.0
+}
 
-left_hip_init = 0.0
-left_thigh_init = 0.05
-left_knee_init = 0.0
-left_foot_init = 0.0
+# Softer lifted poses
+pose_right_lift = {
+    right_hip: 0.0,
+    right_thigh: 0.15,
+    right_knee: -0.20,
+    right_foot: 0.0,
+    left_hip: 0.0,
+    left_thigh: 0.05,
+    left_knee: 0.0,
+    left_foot: 0.0
+}
 
-# Apply initial pose
-p.resetJointState(robot, right_hip, right_hip_init)
-p.resetJointState(robot, right_thigh, right_thigh_init)
-p.resetJointState(robot, right_knee, right_knee_init)
-p.resetJointState(robot, right_foot, right_foot_init)
+pose_left_lift = {
+    right_hip: 0.0,
+    right_thigh: 0.05,
+    right_knee: 0.0,
+    right_foot: 0.0,
+    left_hip: 0.0,
+    left_thigh: 0.15,
+    left_knee: -0.20,
+    left_foot: 0.0
+}
 
-p.resetJointState(robot, left_hip, left_hip_init)
-p.resetJointState(robot, left_thigh, left_thigh_init)
-p.resetJointState(robot, left_knee, left_knee_init)
-p.resetJointState(robot, left_foot, left_foot_init)
+# Set initial pose instantly
+for joint, angle in pose_stand.items():
+    p.resetJointState(robot, joint, angle)
 
-def hold_pose(duration,
-              r_hip, r_thigh, r_knee, r_foot,
-              l_hip, l_thigh, l_knee, l_foot):
-    steps = int(duration * 240)
-    for _ in range(steps):
-        p.setJointMotorControl2(robot, right_hip, p.POSITION_CONTROL, r_hip, force=250, maxVelocity=6)
-        p.setJointMotorControl2(robot, right_thigh, p.POSITION_CONTROL, r_thigh, force=300, maxVelocity=6)
-        p.setJointMotorControl2(robot, right_knee, p.POSITION_CONTROL, r_knee, force=300, maxVelocity=6)
-        p.setJointMotorControl2(robot, right_foot, p.POSITION_CONTROL, r_foot, force=500, maxVelocity=4)
+def apply_pose(pose, force=250, max_vel=1.2):
+    for joint, angle in pose.items():
+        p.setJointMotorControl2(
+            robot,
+            joint,
+            p.POSITION_CONTROL,
+            targetPosition=angle,
+            force=force,
+            maxVelocity=max_vel
+        )
 
-        p.setJointMotorControl2(robot, left_hip, p.POSITION_CONTROL, l_hip, force=250, maxVelocity=6)
-        p.setJointMotorControl2(robot, left_thigh, p.POSITION_CONTROL, l_thigh, force=300, maxVelocity=6)
-        p.setJointMotorControl2(robot, left_knee, p.POSITION_CONTROL, l_knee, force=300, maxVelocity=6)
-        p.setJointMotorControl2(robot, left_foot, p.POSITION_CONTROL, l_foot, force=500, maxVelocity=4)
+def blend_pose(pose_a, pose_b, alpha):
+    blended = {}
+    for joint in pose_a:
+        blended[joint] = (1 - alpha) * pose_a[joint] + alpha * pose_b[joint]
+    return blended
 
+def transition(pose_from, pose_to, duration, steps_per_sec=240):
+    steps = int(duration * steps_per_sec)
+    for i in range(steps):
+        alpha = (i + 1) / steps
+        pose_now = blend_pose(pose_from, pose_to, alpha)
+        apply_pose(pose_now, force=250, max_vel=1.2)
         p.stepSimulation()
-        time.sleep(1/240)
+        time.sleep(1 / 240)
 
-# Let robot settle first
-hold_pose(
-    2.0,
-    right_hip_init, right_thigh_init, right_knee_init, right_foot_init,
-    left_hip_init, left_thigh_init, left_knee_init, left_foot_init
-)
+def hold(pose, duration, steps_per_sec=240):
+    steps = int(duration * steps_per_sec)
+    for _ in range(steps):
+        apply_pose(pose, force=250, max_vel=1.2)
+        p.stepSimulation()
+        time.sleep(1 / 240)
 
-# Repeated step sequence
+# Let robot settle
+hold(pose_stand, 2.0)
+
+# Gentle stepping sequence
 for _ in range(4):
-    # RIGHT LEG: thigh first
-    hold_pose(
-        0.6,
-        0.0, 0.30, 0.0, 0.0,
-        0.0, 0.05, 0.0, 0.0
-    )
+    transition(pose_stand, pose_right_lift, 1.0)
+    hold(pose_right_lift, 0.6)
+    transition(pose_right_lift, pose_stand, 1.0)
+    hold(pose_stand, 0.5)
 
-    # RIGHT LEG: then knee bends
-    hold_pose(
-        0.6,
-        0.0, 0.30, -0.45, 0.0,
-        0.0, 0.05, 0.0, 0.0
-    )
+    transition(pose_stand, pose_left_lift, 1.0)
+    hold(pose_left_lift, 0.6)
+    transition(pose_left_lift, pose_stand, 1.0)
+    hold(pose_stand, 0.5)
 
-    # Return right leg
-    hold_pose(
-        0.6,
-        0.0, 0.05, 0.0, 0.0,
-        0.0, 0.05, 0.0, 0.0
-    )
-
-    # LEFT LEG: thigh first
-    hold_pose(
-        0.6,
-        0.0, 0.05, 0.0, 0.0,
-        0.0, 0.30, 0.0, 0.0
-    )
-
-    # LEFT LEG: then knee bends
-    hold_pose(
-        0.6,
-        0.0, 0.05, 0.0, 0.0,
-        0.0, 0.30, -0.45, 0.0
-    )
-
-    # Return left leg
-    hold_pose(
-        0.6,
-        0.0, 0.05, 0.0, 0.0,
-        0.0, 0.05, 0.0, 0.0
-    )
-
-# Hold final standing pose
-hold_pose(
-    2.0,
-    right_hip_init, right_thigh_init, right_knee_init, right_foot_init,
-    left_hip_init, left_thigh_init, left_knee_init, left_foot_init
-)
+hold(pose_stand, 2.0)
