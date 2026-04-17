@@ -14,40 +14,22 @@ robot = p.loadURDF(
     useFixedBase=True
 )
 
-joint_id = 1  # try 1 first (since it's revolute)
+joint_id = 1
 
-# move forward
-for _ in range(300):
-    p.setJointMotorControl2(
-        bodyUniqueId=robot,
-        jointIndex=joint_id,
-        controlMode=p.POSITION_CONTROL,
-        targetPosition=0.5,
-        force=30
-    )
+# move forward (~12 sec)
+for _ in range(3000):
+    p.setJointMotorControl2(robot, joint_id, p.POSITION_CONTROL, 0.5, force=30)
     p.stepSimulation()
     time.sleep(1/240)
 
-# move backward
-for _ in range(300):
-    p.setJointMotorControl2(
-        bodyUniqueId=robot,
-        jointIndex=joint_id,
-        controlMode=p.POSITION_CONTROL,
-        targetPosition=-0.5,
-        force=30
-    )
+# move backward (~12 sec)
+for _ in range(3000):
+    p.setJointMotorControl2(robot, joint_id, p.POSITION_CONTROL, -0.5, force=30)
     p.stepSimulation()
     time.sleep(1/240)
 
-# hold center
-for _ in range(300):
-    p.setJointMotorControl2(
-        bodyUniqueId=robot,
-        jointIndex=joint_id,
-        controlMode=p.POSITION_CONTROL,
-        targetPosition=0.0,
-        force=30
-    )
+# hold center (~12 sec)
+for _ in range(3000):
+    p.setJointMotorControl2(robot, joint_id, p.POSITION_CONTROL, 0.0, force=30)
     p.stepSimulation()
     time.sleep(1/240)
