@@ -27,20 +27,15 @@ p.resetDebugVisualizerCamera(
 # -----------------------------
 # Joint mapping
 # -----------------------------
-RIGHT_HIP = 1
-RIGHT_THIGH = 3
-RIGHT_KNEE = 5
-RIGHT_FOOT = 7
+RIGHT_HIP = 1      # yaw
+RIGHT_THIGH = 3    # pitch
+RIGHT_KNEE = 5     # pitch
+RIGHT_FOOT = 7     # roll
 
 LEFT_HIP = 9
 LEFT_THIGH = 11
 LEFT_KNEE = 13
 LEFT_FOOT = 15
-
-ALL_JOINTS = [
-    RIGHT_HIP, RIGHT_THIGH, RIGHT_KNEE, RIGHT_FOOT,
-    LEFT_HIP, LEFT_THIGH, LEFT_KNEE, LEFT_FOOT
-]
 
 # -----------------------------
 # Pose definitions
@@ -56,22 +51,46 @@ POSE_STAND = {
     LEFT_FOOT: 0.0
 }
 
-POSE_RIGHT_THIGH_LIFT = {
+# Shift weight to LEFT support leg so RIGHT leg can lift
+POSE_SHIFT_LEFT = {
     RIGHT_HIP: 0.0,
-    RIGHT_THIGH: 0.18,
+    RIGHT_THIGH: 0.05,
     RIGHT_KNEE: 0.0,
     RIGHT_FOOT: 0.0,
     LEFT_HIP: 0.0,
     LEFT_THIGH: 0.05,
     LEFT_KNEE: 0.0,
-    LEFT_FOOT: 0.0
+    LEFT_FOOT: 0.14   # support-foot roll
+}
+
+POSE_RIGHT_THIGH_LIFT = {
+    RIGHT_HIP: 0.0,
+    RIGHT_THIGH: 0.14,
+    RIGHT_KNEE: 0.0,
+    RIGHT_FOOT: 0.0,
+    LEFT_HIP: 0.0,
+    LEFT_THIGH: 0.05,
+    LEFT_KNEE: 0.0,
+    LEFT_FOOT: 0.14
 }
 
 POSE_RIGHT_KNEE_BEND = {
     RIGHT_HIP: 0.0,
-    RIGHT_THIGH: 0.18,
-    RIGHT_KNEE: -0.22,
+    RIGHT_THIGH: 0.14,
+    RIGHT_KNEE: -0.12,
     RIGHT_FOOT: 0.0,
+    LEFT_HIP: 0.0,
+    LEFT_THIGH: 0.05,
+    LEFT_KNEE: 0.0,
+    LEFT_FOOT: 0.14
+}
+
+# Shift weight to RIGHT support leg so LEFT leg can lift
+POSE_SHIFT_RIGHT = {
+    RIGHT_HIP: 0.0,
+    RIGHT_THIGH: 0.05,
+    RIGHT_KNEE: 0.0,
+    RIGHT_FOOT: -0.14,   # support-foot roll
     LEFT_HIP: 0.0,
     LEFT_THIGH: 0.05,
     LEFT_KNEE: 0.0,
@@ -82,9 +101,9 @@ POSE_LEFT_THIGH_LIFT = {
     RIGHT_HIP: 0.0,
     RIGHT_THIGH: 0.05,
     RIGHT_KNEE: 0.0,
-    RIGHT_FOOT: 0.0,
+    RIGHT_FOOT: -0.14,
     LEFT_HIP: 0.0,
-    LEFT_THIGH: 0.18,
+    LEFT_THIGH: 0.14,
     LEFT_KNEE: 0.0,
     LEFT_FOOT: 0.0
 }
@@ -93,26 +112,25 @@ POSE_LEFT_KNEE_BEND = {
     RIGHT_HIP: 0.0,
     RIGHT_THIGH: 0.05,
     RIGHT_KNEE: 0.0,
-    RIGHT_FOOT: 0.0,
+    RIGHT_FOOT: -0.14,
     LEFT_HIP: 0.0,
-    LEFT_THIGH: 0.18,
-    LEFT_KNEE: -0.22,
+    LEFT_THIGH: 0.14,
+    LEFT_KNEE: -0.12,
     LEFT_FOOT: 0.0
 }
 
 # -----------------------------
 # Helpers
 # -----------------------------
-def reset_to_pose(pose: dict[int, float]) -> None:
+def reset_to_pose(pose):
     for joint, angle in pose.items():
         p.resetJointState(robot, joint, angle)
 
-def apply_pose(pose: dict[int, float], force: float = 280, max_vel: float = 1.2) -> None:
+def apply_pose(pose, force=260, max_vel=0.8):
     for joint, angle in pose.items():
-        # lock feet harder so they don't flap around
         if joint in (RIGHT_FOOT, LEFT_FOOT):
-            joint_force = 500
-            joint_vel = 0.8
+            joint_force = 450
+            joint_vel = 0.6
         else:
             joint_force = force
             joint_vel = max_vel
@@ -126,19 +144,13 @@ def apply_pose(pose: dict[int, float], force: float = 280, max_vel: float = 1.2)
             maxVelocity=joint_vel
         )
 
-def blend_pose(pose_a: dict[int, float], pose_b: dict[int, float], alpha: float) -> dict[int, float]:
+def blend_pose(pose_a, pose_b, alpha):
     blended = {}
     for joint in pose_a:
         blended[joint] = (1.0 - alpha) * pose_a[joint] + alpha * pose_b[joint]
     return blended
 
-def transition_pose(
-    pose_from: dict[int, float],
-    pose_to: dict[int, float],
-    duration: float,
-    force: float = 280,
-    max_vel: float = 1.2
-) -> None:
+def transition_pose(pose_from, pose_to, duration, force=260, max_vel=0.8):
     steps = max(1, int(duration * 240))
     for i in range(steps):
         alpha = (i + 1) / steps
@@ -147,12 +159,7 @@ def transition_pose(
         p.stepSimulation()
         time.sleep(1 / 240)
 
-def hold_pose(
-    pose: dict[int, float],
-    duration: float,
-    force: float = 280,
-    max_vel: float = 1.2
-) -> None:
+def hold_pose(pose, duration, force=260, max_vel=0.8):
     steps = max(1, int(duration * 240))
     for _ in range(steps):
         apply_pose(pose, force=force, max_vel=max_vel)
@@ -163,31 +170,32 @@ def hold_pose(
 # State machine
 # -----------------------------
 states = [
-    ("stand", POSE_STAND, 1.5),
+    ("stand", POSE_STAND, 1.2),
+
+    ("shift_left", POSE_SHIFT_LEFT, 0.8),
     ("right_thigh_lift", POSE_RIGHT_THIGH_LIFT, 0.8),
     ("right_knee_bend", POSE_RIGHT_KNEE_BEND, 0.8),
-    ("stand", POSE_STAND, 0.8),
+    ("stand", POSE_STAND, 1.0),
+
+    ("shift_right", POSE_SHIFT_RIGHT, 0.8),
     ("left_thigh_lift", POSE_LEFT_THIGH_LIFT, 0.8),
     ("left_knee_bend", POSE_LEFT_KNEE_BEND, 0.8),
-    ("stand", POSE_STAND, 0.8),
+    ("stand", POSE_STAND, 1.0),
 ]
 
-# Start pose
 reset_to_pose(POSE_STAND)
 hold_pose(POSE_STAND, 2.0)
 
-# Run several cycles
 current_pose = POSE_STAND
-num_cycles = 4
+num_cycles = 3
 
 for cycle in range(num_cycles):
     print(f"\nCycle {cycle + 1}")
     for state_name, target_pose, hold_time in states:
         print(f"State: {state_name}")
-        transition_pose(current_pose, target_pose, duration=0.9, force=280, max_vel=1.2)
-        hold_pose(target_pose, duration=hold_time, force=280, max_vel=1.2)
+        transition_pose(current_pose, target_pose, duration=1.0, force=260, max_vel=0.8)
+        hold_pose(target_pose, duration=hold_time, force=260, max_vel=0.8)
         current_pose = target_pose
 
-# Finish in stand pose
-transition_pose(current_pose, POSE_STAND, duration=1.0, force=280, max_vel=1.2)
-hold_pose(POSE_STAND, duration=2.0, force=280, max_vel=1.2)
+transition_pose(current_pose, POSE_STAND, duration=1.0, force=260, max_vel=0.8)
+hold_pose(POSE_STAND, 2.0)
