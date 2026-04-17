@@ -66,7 +66,7 @@ while True:
 
     # Hip same on both sides
     p.setJointMotorControl2(robot, RIGHT_HIP, p.POSITION_CONTROL,
-                            targetPosition=hip_val, force=300, maxVelocity=1.5)
+                  sition=hip_val, force=300, maxVelocity=1.5)
     p.setJointMotorControl2(robot, LEFT_HIP, p.POSITION_CONTROL,
                             targetPosition=hip_val, force=300, maxVelocity=1.5)
 
@@ -84,9 +84,4 @@ while True:
 
     # Feet locked
     p.setJointMotorControl2(robot, RIGHT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=0.0, force=500, maxVelocity=1.0)
-    p.setJointMotorControl2(robot, LEFT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=0.0, force=500, maxVelocity=1.0)
-
-    p.stepSimulation()
-    time.sleep(1 / 240)
+                            targetPo
