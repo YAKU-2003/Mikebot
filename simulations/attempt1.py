@@ -24,7 +24,7 @@ robot_start_pos = [0, 0, 0.25]
 robot_start_ori = p.getQuaternionFromEuler([0, 0, 0])
 
 robot_id = p.loadURDF(
-    "simready1_description/urdf/simready1.urdf",
+    "simready1.urdf",
     robot_start_pos,
     robot_start_ori,
     useFixedBase=False
