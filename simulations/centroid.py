@@ -10,8 +10,8 @@ p.loadURDF("plane.urdf")
 
 robot = p.loadURDF(
     r"C:/Users/ykulk/Downloads/simulations/attempt1/simready1.urdf",
-    basePosition=[0, 0, 0.8],
-    useFixedBase=True
+    basePosition=[0, 0, 0.45],
+    useFixedBase=False
 )
 
 time.sleep(1)
