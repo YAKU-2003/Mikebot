@@ -14,7 +14,7 @@ robot = p.loadURDF(
     useFixedBase=True
 )
 
-joint_id = 1
+joint_id = 5
 
 # move forward (~12 sec)
 for _ in range(3000):
