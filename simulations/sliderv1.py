@@ -45,16 +45,16 @@ p.resetJointState(robot, RIGHT_KNEE, 0.0)
 p.resetJointState(robot, RIGHT_FOOT, 0.0)
 
 p.resetJointState(robot, LEFT_HIP, 0.0)
-p.resetJointState(robot, LEFT_THIGH, 0.05)
+p.resetJointState(robot, LEFT_THIGH, -0.05)
 p.resetJointState(robot, LEFT_KNEE, 0.0)
 p.resetJointState(robot, LEFT_FOOT, 0.0)
 
 # -----------------------------
-# Sliders (SYNCED)
+# Sliders
 # -----------------------------
-hip_slider   = p.addUserDebugParameter("Hip (both)", -1.0, 1.0, 0.0)
-thigh_slider = p.addUserDebugParameter("Thigh (both)", -1.0, 1.0, 0.05)
-knee_slider  = p.addUserDebugParameter("Knee (both)", -1.5, 1.5, 0.0)
+hip_slider = p.addUserDebugParameter("Hip (both)", -1.0, 1.0, 0.0)
+thigh_slider = p.addUserDebugParameter("Thigh (sync opposite)", -1.0, 1.0, 0.05)
+knee_slider = p.addUserDebugParameter("Knee (sync opposite)", -1.5, 1.5, 0.0)
 
 # -----------------------------
 # Main loop
@@ -64,23 +64,25 @@ while True:
     thigh_val = p.readUserDebugParameter(thigh_slider)
     knee_val = p.readUserDebugParameter(knee_slider)
 
-    # Apply same value to both legs
+    # Hip same on both sides
     p.setJointMotorControl2(robot, RIGHT_HIP, p.POSITION_CONTROL,
                             targetPosition=hip_val, force=300, maxVelocity=1.5)
     p.setJointMotorControl2(robot, LEFT_HIP, p.POSITION_CONTROL,
                             targetPosition=hip_val, force=300, maxVelocity=1.5)
 
+    # Thigh opposite signs
     p.setJointMotorControl2(robot, RIGHT_THIGH, p.POSITION_CONTROL,
                             targetPosition=thigh_val, force=300, maxVelocity=1.5)
     p.setJointMotorControl2(robot, LEFT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=thigh_val, force=300, maxVelocity=1.5)
+                            targetPosition=-thigh_val, force=300, maxVelocity=1.5)
 
+    # Knee opposite signs
     p.setJointMotorControl2(robot, RIGHT_KNEE, p.POSITION_CONTROL,
                             targetPosition=knee_val, force=300, maxVelocity=1.5)
     p.setJointMotorControl2(robot, LEFT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=knee_val, force=300, maxVelocity=1.5)
+                            targetPosition=-knee_val, force=300, maxVelocity=1.5)
 
-    # Lock feet (no movement)
+    # Feet locked
     p.setJointMotorControl2(robot, RIGHT_FOOT, p.POSITION_CONTROL,
                             targetPosition=0.0, force=500, maxVelocity=1.0)
     p.setJointMotorControl2(robot, LEFT_FOOT, p.POSITION_CONTROL,
