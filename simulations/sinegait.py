@@ -37,10 +37,10 @@ t = 0.0
 
 while True:
     # sinusoidal gait
-    hip_amp = 0.35
-    thigh_amp = 0.20
-    knee_amp = 0.55
-    foot_amp = 0.20
+    hip_amp = 0.20
+    thigh_amp = 0.45
+    knee_amp = 0.90
+    foot_amp = 0.45
 
     s = math.sin(t)
 
@@ -50,7 +50,7 @@ while True:
 
     # thighs follow hips lightly
     right_thigh_target = thigh_amp * s
-    left_thigh_target = -thigh_amp * s
+    left_thigh_target = thigh_amp * s
 
     # knees bend during swing
     right_knee_target = knee_amp * max(0.0, s)
@@ -58,7 +58,7 @@ while True:
 
     # feet compensate a little
     right_foot_target = -foot_amp * max(0.0, s)
-    left_foot_target = -foot_amp * max(0.0, -s)
+    left_foot_target = foot_amp * max(0.0, -s)
 
     p.setJointMotorControl2(robot, right_hip, p.POSITION_CONTROL, right_hip_target, force=200, maxVelocity=12)
     p.setJointMotorControl2(robot, left_hip, p.POSITION_CONTROL, left_hip_target, force=200, maxVelocity=12)
