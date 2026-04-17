@@ -117,11 +117,11 @@ hold_pose(POSE_STAND, 2.0)
 
 for _ in range(3):
     print("Standing to crouch")
-    transition_pose(POSE_STAND, POSE_CROUCH, duration=1.5, force=320, max_vel=0.8)
+    transition_pose(POSE_STAND, POSE_CROUCH, duration=1.2, force=320, max_vel=0.8)
     hold_pose(POSE_CROUCH, 1.0, force=320, max_vel=0.8)
 
     print("Crouch to standing")
-    transition_pose(POSE_CROUCH, POSE_STAND, duration=1.5, force=320, max_vel=0.8)
+    transition_pose(POSE_CROUCH, POSE_STAND, duration=1.2, force=320, max_vel=0.8)
     hold_pose(POSE_STAND, 1.0, force=320, max_vel=0.8)
 
 hold_pose(POSE_STAND, 2.0)
