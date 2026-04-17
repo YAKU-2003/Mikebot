@@ -126,7 +126,7 @@ def reset_to_pose(pose):
     for joint, angle in pose.items():
         p.resetJointState(robot, joint, angle)
 
-def apply_pose(pose, force=280, max_vel=0.7):
+def apply_pose(pose, force=280, max_vel=1.5):
     for joint, angle in pose.items():
         if joint in (RIGHT_FOOT, LEFT_FOOT):
             joint_force = 450
@@ -150,7 +150,7 @@ def blend_pose(pose_a, pose_b, alpha):
         blended[joint] = (1.0 - alpha) * pose_a[joint] + alpha * pose_b[joint]
     return blended
 
-def transition_pose(pose_from, pose_to, duration, force=280, max_vel=0.7):
+def transition_pose(pose_from, pose_to, duration, force=280, max_vel=0.9):
     steps = max(1, int(duration * 240))
     for i in range(steps):
         alpha = (i + 1) / steps
