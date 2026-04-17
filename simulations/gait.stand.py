@@ -60,29 +60,29 @@ POSE_SHIFT_LEFT = {
     LEFT_HIP: 0.0,
     LEFT_THIGH: 0.05,
     LEFT_KNEE: 0.0,
-    LEFT_FOOT: 0.14   # support-foot roll
+    LEFT_FOOT: 0.22
 }
 
 POSE_RIGHT_THIGH_LIFT = {
     RIGHT_HIP: 0.0,
-    RIGHT_THIGH: 0.14,
+    RIGHT_THIGH: 0.24,
     RIGHT_KNEE: 0.0,
     RIGHT_FOOT: 0.0,
     LEFT_HIP: 0.0,
     LEFT_THIGH: 0.05,
     LEFT_KNEE: 0.0,
-    LEFT_FOOT: 0.14
+    LEFT_FOOT: 0.22
 }
 
 POSE_RIGHT_KNEE_BEND = {
     RIGHT_HIP: 0.0,
-    RIGHT_THIGH: 0.14,
-    RIGHT_KNEE: -0.12,
+    RIGHT_THIGH: 0.24,
+    RIGHT_KNEE: -0.22,
     RIGHT_FOOT: 0.0,
     LEFT_HIP: 0.0,
     LEFT_THIGH: 0.05,
     LEFT_KNEE: 0.0,
-    LEFT_FOOT: 0.14
+    LEFT_FOOT: 0.22
 }
 
 # Shift weight to RIGHT support leg so LEFT leg can lift
@@ -90,7 +90,7 @@ POSE_SHIFT_RIGHT = {
     RIGHT_HIP: 0.0,
     RIGHT_THIGH: 0.05,
     RIGHT_KNEE: 0.0,
-    RIGHT_FOOT: -0.14,   # support-foot roll
+    RIGHT_FOOT: -0.22,
     LEFT_HIP: 0.0,
     LEFT_THIGH: 0.05,
     LEFT_KNEE: 0.0,
@@ -101,9 +101,9 @@ POSE_LEFT_THIGH_LIFT = {
     RIGHT_HIP: 0.0,
     RIGHT_THIGH: 0.05,
     RIGHT_KNEE: 0.0,
-    RIGHT_FOOT: -0.14,
+    RIGHT_FOOT: -0.22,
     LEFT_HIP: 0.0,
-    LEFT_THIGH: 0.14,
+    LEFT_THIGH: 0.24,
     LEFT_KNEE: 0.0,
     LEFT_FOOT: 0.0
 }
@@ -112,10 +112,10 @@ POSE_LEFT_KNEE_BEND = {
     RIGHT_HIP: 0.0,
     RIGHT_THIGH: 0.05,
     RIGHT_KNEE: 0.0,
-    RIGHT_FOOT: -0.14,
+    RIGHT_FOOT: -0.22,
     LEFT_HIP: 0.0,
-    LEFT_THIGH: 0.14,
-    LEFT_KNEE: -0.12,
+    LEFT_THIGH: 0.24,
+    LEFT_KNEE: -0.22,
     LEFT_FOOT: 0.0
 }
 
@@ -126,7 +126,7 @@ def reset_to_pose(pose):
     for joint, angle in pose.items():
         p.resetJointState(robot, joint, angle)
 
-def apply_pose(pose, force=260, max_vel=0.8):
+def apply_pose(pose, force=280, max_vel=0.7):
     for joint, angle in pose.items():
         if joint in (RIGHT_FOOT, LEFT_FOOT):
             joint_force = 450
@@ -150,7 +150,7 @@ def blend_pose(pose_a, pose_b, alpha):
         blended[joint] = (1.0 - alpha) * pose_a[joint] + alpha * pose_b[joint]
     return blended
 
-def transition_pose(pose_from, pose_to, duration, force=260, max_vel=0.8):
+def transition_pose(pose_from, pose_to, duration, force=280, max_vel=0.7):
     steps = max(1, int(duration * 240))
     for i in range(steps):
         alpha = (i + 1) / steps
@@ -159,7 +159,7 @@ def transition_pose(pose_from, pose_to, duration, force=260, max_vel=0.8):
         p.stepSimulation()
         time.sleep(1 / 240)
 
-def hold_pose(pose, duration, force=260, max_vel=0.8):
+def hold_pose(pose, duration, force=280, max_vel=0.7):
     steps = max(1, int(duration * 240))
     for _ in range(steps):
         apply_pose(pose, force=force, max_vel=max_vel)
@@ -193,9 +193,9 @@ for cycle in range(num_cycles):
     print(f"\nCycle {cycle + 1}")
     for state_name, target_pose, hold_time in states:
         print(f"State: {state_name}")
-        transition_pose(current_pose, target_pose, duration=1.0, force=260, max_vel=0.8)
-        hold_pose(target_pose, duration=hold_time, force=260, max_vel=0.8)
+        transition_pose(current_pose, target_pose, duration=1.2, force=280, max_vel=0.7)
+        hold_pose(target_pose, duration=hold_time, force=280, max_vel=0.7)
         current_pose = target_pose
 
-transition_pose(current_pose, POSE_STAND, duration=1.0, force=260, max_vel=0.8)
+transition_pose(current_pose, POSE_STAND, duration=1.2, force=280, max_vel=0.7)
 hold_pose(POSE_STAND, 2.0)
