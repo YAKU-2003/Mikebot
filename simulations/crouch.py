@@ -8,7 +8,6 @@ import time
 p.connect(p.GUI)
 p.setGravity(0, 0, -9.81)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
-
 p.loadURDF("plane.urdf")
 
 robot = p.loadURDF(
@@ -51,14 +50,16 @@ POSE_STAND = {
     LEFT_FOOT: 0.0
 }
 
+# Feet remain fixed at 0.0
 POSE_CROUCH = {
     RIGHT_HIP: 0.0,
     RIGHT_THIGH: 0.22,
     RIGHT_KNEE: -0.30,
     RIGHT_FOOT: 0.0,
+
     LEFT_HIP: 0.0,
-    LEFT_THIGH: 0.22,
-    LEFT_KNEE: -0.30,
+    LEFT_THIGH: -0.22,
+    LEFT_KNEE: 0.30,
     LEFT_FOOT: 0.0
 }
 
@@ -72,8 +73,9 @@ def reset_to_pose(pose):
 def apply_pose(pose, force=320, max_vel=0.8):
     for joint, angle in pose.items():
         if joint in (RIGHT_FOOT, LEFT_FOOT):
+            # feet are only held fixed, not moved
             joint_force = 500
-            joint_vel = 0.6
+            joint_vel = 0.5
         else:
             joint_force = force
             joint_vel = max_vel
