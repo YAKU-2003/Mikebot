@@ -42,7 +42,7 @@ LEFT_KNEE = 13
 LEFT_FOOT = 15
 
 # -----------------------------
-# Stable standing pose
+# Base poses
 # -----------------------------
 POSE_STAND = {
     "hip": 0.0,
@@ -51,7 +51,6 @@ POSE_STAND = {
     "foot": 0.0
 }
 
-# Final crouch pose from slider
 POSE_CROUCH = {
     "hip": 0.0,
     "thigh": -0.800,
@@ -62,88 +61,59 @@ POSE_CROUCH = {
 # -----------------------------
 # Helpers
 # -----------------------------
-def apply_pose(pose, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0):
+def apply_pose(pose, force_main=1100, force_foot=850, vel_main=3.5, vel_foot=2.0):
     # Right
-    p.setJointMotorControl2(robot, RIGHT_HIP, p.POSITION_CONTROL,
-                            targetPosition=pose["hip"], force=force_main, maxVelocity=vel_main)
-    p.setJointMotorControl2(robot, RIGHT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=pose["thigh"], force=force_main, maxVelocity=vel_main)
-    p.setJointMotorControl2(robot, RIGHT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=pose["knee"], force=force_main, maxVelocity=vel_main)
-    p.setJointMotorControl2(robot, RIGHT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=pose["foot"], force=force_foot, maxVelocity=vel_foot)
+    p.setJointMotorControl2(robot, RIGHT_HIP, p.POSITION_CONTROL, pose["hip"], force=force_main, maxVelocity=vel_main)
+    p.setJointMotorControl2(robot, RIGHT_THIGH, p.POSITION_CONTROL, pose["thigh"], force=force_main, maxVelocity=vel_main)
+    p.setJointMotorControl2(robot, RIGHT_KNEE, p.POSITION_CONTROL, pose["knee"], force=force_main, maxVelocity=vel_main)
+    p.setJointMotorControl2(robot, RIGHT_FOOT, p.POSITION_CONTROL, pose["foot"], force=force_foot, maxVelocity=vel_foot)
 
-    # Left mirrored
-    p.setJointMotorControl2(robot, LEFT_HIP, p.POSITION_CONTROL,
-                            targetPosition=-pose["hip"], force=force_main, maxVelocity=vel_main)
-    p.setJointMotorControl2(robot, LEFT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=-pose["thigh"], force=force_main, maxVelocity=vel_main)
-    p.setJointMotorControl2(robot, LEFT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=-pose["knee"], force=force_main, maxVelocity=vel_main)
-    p.setJointMotorControl2(robot, LEFT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=-pose["foot"], force=force_foot, maxVelocity=vel_foot)
+    # Left (mirrored)
+    p.setJointMotorControl2(robot, LEFT_HIP, p.POSITION_CONTROL, -pose["hip"], force=force_main, maxVelocity=vel_main)
+    p.setJointMotorControl2(robot, LEFT_THIGH, p.POSITION_CONTROL, -pose["thigh"], force=force_main, maxVelocity=vel_main)
+    p.setJointMotorControl2(robot, LEFT_KNEE, p.POSITION_CONTROL, -pose["knee"], force=force_main, maxVelocity=vel_main)
+    p.setJointMotorControl2(robot, LEFT_FOOT, p.POSITION_CONTROL, -pose["foot"], force=force_foot, maxVelocity=vel_foot)
 
-def hold_pose(pose, duration, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0):
-    steps = max(1, int(duration * 240))
-    for _ in range(steps):
-        apply_pose(pose, force_main, force_foot, vel_main, vel_foot)
-        p.stepSimulation()
-        time.sleep(1/240)
-
-def blend_pose(pose_a, pose_b, alpha):
+def blend_pose(a, b, alpha):
     return {
-        "hip":   (1 - alpha) * pose_a["hip"]   + alpha * pose_b["hip"],
-        "thigh": (1 - alpha) * pose_a["thigh"] + alpha * pose_b["thigh"],
-        "knee":  (1 - alpha) * pose_a["knee"]  + alpha * pose_b["knee"],
-        "foot":  (1 - alpha) * pose_a["foot"]  + alpha * pose_b["foot"],
+        "hip":   (1-alpha)*a["hip"]   + alpha*b["hip"],
+        "thigh": (1-alpha)*a["thigh"] + alpha*b["thigh"],
+        "knee":  (1-alpha)*a["knee"]  + alpha*b["knee"],
+        "foot":  (1-alpha)*a["foot"]  + alpha*b["foot"],
     }
 
-def transition_pose(start_pose, end_pose, duration, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0):
-    steps = max(1, int(duration * 240))
+def go_to_pose(start, end, duration=0.25):
+    steps = int(duration * 240)
     for i in range(steps):
-        alpha = (i + 1) / steps
-        pose = blend_pose(start_pose, end_pose, alpha)
-        apply_pose(pose, force_main, force_foot, vel_main, vel_foot)
+        alpha = (i+1)/steps
+        pose = blend_pose(start, end, alpha)
+        apply_pose(pose)
         p.stepSimulation()
         time.sleep(1/240)
 
 # -----------------------------
-# Build fine progressive stages
-# knees first, then thighs
+# Create percent sequence
 # -----------------------------
-def partial_pose(knee_frac, thigh_frac):
-    return {
-        "hip": 0.0,
-        "thigh": POSE_STAND["thigh"] + thigh_frac * (POSE_CROUCH["thigh"] - POSE_STAND["thigh"]),
-        "knee":  POSE_STAND["knee"]  + knee_frac  * (POSE_CROUCH["knee"]  - POSE_STAND["knee"]),
-        "foot": 0.0
-    }
-
-fractions = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
-
-CROUCH_STAGES = []
-for f in fractions:
-    CROUCH_STAGES.append(partial_pose(knee_frac=f, thigh_frac=max(0.0, f - 0.1)))
-    CROUCH_STAGES.append(partial_pose(knee_frac=f, thigh_frac=f))
+up = [i/100.0 for i in range(0, 101, 10)]
+down = [i/100.0 for i in range(90, -1, -10)]
+cycle = up + down
 
 # -----------------------------
 # Run
 # -----------------------------
-hold_pose(POSE_STAND, 3.0)
+current_pose = POSE_STAND
 
 while True:
-    current = POSE_STAND
+    for f in cycle:
+        target = blend_pose(POSE_STAND, POSE_CROUCH, f)
 
-    print("Progressive crouch down")
-    for stage in CROUCH_STAGES:
-        transition_pose(current, stage, duration=0.32, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0)
-        hold_pose(stage, duration=0.10, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0)
-        current = stage
+        # smoother transition between steps
+        go_to_pose(current_pose, target, duration=0.28)
 
-    hold_pose(POSE_CROUCH, 0.8, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0)
+        # small hold to reduce wobble
+        for _ in range(30):
+            apply_pose(target)
+            p.stepSimulation()
+            time.sleep(1/240)
 
-    print("Return to stand")
-    transition_pose(POSE_CROUCH, POSE_STAND, duration=2.4, force_main=1100, force_foot=850, vel_main=3.5, vel_foot=2.0)
-
-    # longer recovery to stop backward wobble
-    hold_pose(POSE_STAND, 3.0, force_main=1100, force_foot=850, vel_main=3.5, vel_foot=2.0)
+        current_pose = target
