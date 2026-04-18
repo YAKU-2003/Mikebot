@@ -10,8 +10,9 @@ L2 = 0.12   # lower leg
 # Example joint angles (radians)
 # Replace these with your actual values if needed
 # -----------------------------
-theta1 = -0.60   # thigh angle
-theta2 = 0.48    # knee angle
+theta1 = math.radians(-30)
+
+theta2 = math.radians(40)  # knee angle
 
 # -----------------------------
 # Forward kinematics
