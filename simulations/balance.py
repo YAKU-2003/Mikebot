@@ -37,12 +37,12 @@ LEFT_KNEE = 13
 LEFT_FOOT = 15
 
 # -----------------------------
-# Initial standing pose
-# mirrored signs: right = +, left = -
+# Standing / slightly crouched pose
+# mirrored: right = +, left = -
 # -----------------------------
 stand_hip = 0.0
-stand_thigh = 0.05
-stand_knee = 0.0
+stand_thigh = 0.08
+stand_knee = 0.10
 stand_foot = 0.0
 
 p.resetJointState(robot, RIGHT_HIP, stand_hip)
@@ -56,100 +56,88 @@ p.resetJointState(robot, LEFT_KNEE, -stand_knee)
 p.resetJointState(robot, LEFT_FOOT, -stand_foot)
 
 # -----------------------------
-# Controller gains
-# Tune these slowly if needed
+# Gains (much softer)
 # -----------------------------
-Kp_thigh = 0.8
-Kd_thigh = 0.15
+Kp_thigh = 0.35
+Kd_thigh = 0.04
 
-Kp_knee = 0.4
-Kd_knee = 0.08
+Kp_knee = 0.18
+Kd_knee = 0.02
 
-# Joint limits for safety in controller
-max_thigh_cmd = 0.35
-max_knee_cmd = 0.35
+max_thigh_cmd = 0.22
+max_knee_cmd = 0.22
 
 def clamp(val, lo, hi):
     return max(lo, min(hi, val))
 
 # -----------------------------
-# Let robot settle first
+# Settle first
 # -----------------------------
 for _ in range(480):
     p.setJointMotorControl2(robot, RIGHT_HIP, p.POSITION_CONTROL,
-                            targetPosition=stand_hip, force=1500, maxVelocity=8)
+                            targetPosition=stand_hip, force=500, maxVelocity=3)
     p.setJointMotorControl2(robot, RIGHT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=stand_thigh, force=1800, maxVelocity=8)
+                            targetPosition=stand_thigh, force=700, maxVelocity=4)
     p.setJointMotorControl2(robot, RIGHT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=stand_knee, force=1800, maxVelocity=8)
+                            targetPosition=stand_knee, force=700, maxVelocity=4)
     p.setJointMotorControl2(robot, RIGHT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=stand_foot, force=2000, maxVelocity=6)
+                            targetPosition=stand_foot, force=900, maxVelocity=3)
 
     p.setJointMotorControl2(robot, LEFT_HIP, p.POSITION_CONTROL,
-                            targetPosition=-stand_hip, force=1500, maxVelocity=8)
+                            targetPosition=-stand_hip, force=500, maxVelocity=3)
     p.setJointMotorControl2(robot, LEFT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=-stand_thigh, force=1800, maxVelocity=8)
+                            targetPosition=-stand_thigh, force=700, maxVelocity=4)
     p.setJointMotorControl2(robot, LEFT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=-stand_knee, force=1800, maxVelocity=8)
+                            targetPosition=-stand_knee, force=700, maxVelocity=4)
     p.setJointMotorControl2(robot, LEFT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=-stand_foot, force=2000, maxVelocity=6)
+                            targetPosition=-stand_foot, force=900, maxVelocity=3)
 
     p.stepSimulation()
     time.sleep(1/240)
 
-# -----------------------------
-# Main balance loop
-# -----------------------------
 prev_pitch = 0.0
 
+# -----------------------------
+# Main loop
+# -----------------------------
 while True:
-    dt = 1.0 / 240.0
+    dt = 1/240
 
-    # Virtual IMU from simulation
     base_pos, base_orn = p.getBasePositionAndOrientation(robot)
     roll, pitch, yaw = p.getEulerFromQuaternion(base_orn)
-
-    # Approximate pitch rate
     pitch_rate = (pitch - prev_pitch) / dt
     prev_pitch = pitch
 
-    # ---------------------------------
-    # Feedback controller
-    # If robot tips forward/backward,
-    # thighs and knees react to counter it
-    # ---------------------------------
-    thigh_correction = -(Kp_thigh * pitch + Kd_thigh * pitch_rate)
-    knee_correction = -(Kp_knee * pitch + Kd_knee * pitch_rate)
+    # softer corrections
+    thigh_corr = -(Kp_thigh * pitch + Kd_thigh * pitch_rate)
+    knee_corr  = -(Kp_knee * pitch + Kd_knee * pitch_rate)
 
-    # Add corrections around standing pose
-    right_thigh_cmd = clamp(stand_thigh + thigh_correction, -max_thigh_cmd, max_thigh_cmd)
-    right_knee_cmd  = clamp(stand_knee + knee_correction,  -max_knee_cmd,  max_knee_cmd)
+    right_thigh_cmd = clamp(stand_thigh + thigh_corr, -max_thigh_cmd, max_thigh_cmd)
+    right_knee_cmd  = clamp(stand_knee + knee_corr,  -max_knee_cmd,  max_knee_cmd)
 
-    # mirrored left side
     left_thigh_cmd = -right_thigh_cmd
     left_knee_cmd  = -right_knee_cmd
 
-    # Keep hips and feet locked for now
+    # hips and feet held softly, not brutally
     p.setJointMotorControl2(robot, RIGHT_HIP, p.POSITION_CONTROL,
-                            targetPosition=stand_hip, force=1500, maxVelocity=8)
+                            targetPosition=stand_hip, force=500, maxVelocity=3)
     p.setJointMotorControl2(robot, RIGHT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=stand_foot, force=2200, maxVelocity=6)
+                            targetPosition=stand_foot, force=900, maxVelocity=3)
 
     p.setJointMotorControl2(robot, LEFT_HIP, p.POSITION_CONTROL,
-                            targetPosition=-stand_hip, force=1500, maxVelocity=8)
+                            targetPosition=-stand_hip, force=500, maxVelocity=3)
     p.setJointMotorControl2(robot, LEFT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=-stand_foot, force=2200, maxVelocity=6)
+                            targetPosition=-stand_foot, force=900, maxVelocity=3)
 
-    # Legs move to balance the robot
     p.setJointMotorControl2(robot, RIGHT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=right_thigh_cmd, force=2200, maxVelocity=10)
+                            targetPosition=right_thigh_cmd, force=900, maxVelocity=5)
     p.setJointMotorControl2(robot, RIGHT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=right_knee_cmd, force=2200, maxVelocity=10)
+                            targetPosition=right_knee_cmd, force=900, maxVelocity=5)
 
     p.setJointMotorControl2(robot, LEFT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=left_thigh_cmd, force=2200, maxVelocity=10)
+                            targetPosition=left_thigh_cmd, force=900, maxVelocity=5)
     p.setJointMotorControl2(robot, LEFT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=left_knee_cmd, force=2200, maxVelocity=10)
+                            targetPosition=left_knee_cmd, force=900, maxVelocity=5)
 
     p.stepSimulation()
     time.sleep(dt)
