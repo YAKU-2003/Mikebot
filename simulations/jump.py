@@ -13,18 +13,18 @@ p.loadURDF("plane.urdf")
 robot = p.loadURDF(
     r"C:/Users/ykulk/Downloads/simulations/attempt1/simready1.urdf",
     basePosition=[0, 0, 0.45],
-    useFixedBase=True
+    useFixedBase=True   # keep stable for demo
 )
 
 p.resetDebugVisualizerCamera(
-    cameraDistance=1.5,
+    cameraDistance=1.6,
     cameraYaw=50,
     cameraPitch=-15,
-    cameraTargetPosition=[0, 0, 0.2]
+    cameraTargetPosition=[0, 0, 0.22]
 )
 
 # -----------------------------
-# Joint mapping
+# Joint IDs
 # -----------------------------
 RIGHT_HIP = 1
 RIGHT_THIGH = 3
@@ -37,62 +37,58 @@ LEFT_KNEE = 13
 LEFT_FOOT = 15
 
 # -----------------------------
-# Helper
+# Pose function (mirrored)
 # -----------------------------
-def set_pose(thigh, knee, force=1800, max_vel=20):
-    # right side
+def set_pose(thigh, knee, force=1800, vel=20):
+
+    # RIGHT (positive)
     p.setJointMotorControl2(robot, RIGHT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=thigh, force=force, maxVelocity=max_vel)
+                            targetPosition=thigh, force=force, maxVelocity=vel)
     p.setJointMotorControl2(robot, RIGHT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=knee, force=force, maxVelocity=max_vel)
+                            targetPosition=knee, force=force, maxVelocity=vel)
 
-    # left side mirrored
+    # LEFT (negative mirror)
     p.setJointMotorControl2(robot, LEFT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=-thigh, force=force, maxVelocity=max_vel)
+                            targetPosition=-thigh, force=force, maxVelocity=vel)
     p.setJointMotorControl2(robot, LEFT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=-knee, force=force, maxVelocity=max_vel)
+                            targetPosition=-knee, force=force, maxVelocity=vel)
 
-    # keep hip and feet fixed
-    p.setJointMotorControl2(robot, RIGHT_HIP, p.POSITION_CONTROL,
-                            targetPosition=0.0, force=1000, maxVelocity=10)
-    p.setJointMotorControl2(robot, LEFT_HIP, p.POSITION_CONTROL,
-                            targetPosition=0.0, force=1000, maxVelocity=10)
-
-    p.setJointMotorControl2(robot, RIGHT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=0.0, force=1000, maxVelocity=10)
-    p.setJointMotorControl2(robot, LEFT_FOOT, p.POSITION_CONTROL,
-                            targetPosition=0.0, force=1000, maxVelocity=10)
+    # keep hips + feet fixed
+    for j in [RIGHT_HIP, LEFT_HIP, RIGHT_FOOT, LEFT_FOOT]:
+        p.setJointMotorControl2(robot, j, p.POSITION_CONTROL,
+                                targetPosition=0.0, force=1000, maxVelocity=10)
 
 # -----------------------------
 # Main loop
 # -----------------------------
 while True:
-    # stand
+
+    # --- 1. STAND ---
     for _ in range(120):
-        set_pose(thigh=0.05, knee=0.0, force=1200, max_vel=8)
+        set_pose(thigh=0.05, knee=0.05, force=1200, vel=8)
         p.stepSimulation()
         time.sleep(1/240)
 
-    # crouch
-    for _ in range(90):
-        set_pose(thigh=0.28, knee=-0.35, force=1600, max_vel=10)
+    # --- 2. CROUCH ---
+    for _ in range(100):
+        set_pose(thigh=0.28, knee=0.35, force=1800, vel=12)
         p.stepSimulation()
         time.sleep(1/240)
 
-    # explosive extension (simultaneous)
+    # --- 3. SNAP EXTENSION (SIMULTANEOUS) ---
     for _ in range(10):
-        set_pose(thigh=0.0, knee=0.0, force=2600, max_vel=45)
+        set_pose(thigh=0.0, knee=0.0, force=2600, vel=50)
         p.stepSimulation()
         time.sleep(1/240)
 
-    # hold extended pose briefly
-    for _ in range(60):
-        set_pose(thigh=0.0, knee=0.0, force=1600, max_vel=12)
+    # --- 4. HOLD ---
+    for _ in range(80):
+        set_pose(thigh=0.0, knee=0.0, force=1500, vel=10)
         p.stepSimulation()
         time.sleep(1/240)
 
-    # return to soft stand
-    for _ in range(90):
-        set_pose(thigh=0.05, knee=0.0, force=1200, max_vel=8)
+    # --- 5. RESET ---
+    for _ in range(100):
+        set_pose(thigh=0.08, knee=0.08, force=1200, vel=8)
         p.stepSimulation()
         time.sleep(1/240)
