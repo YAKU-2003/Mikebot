@@ -39,6 +39,15 @@ left_foot = 15
 t = 0.0
 
 while True:
+
+    # sinusoidal gait
+    hip_amp = 0.20
+    thigh_amp = 0.45
+    knee_amp = 0.90
+    foot_amp = 0.45
+
+
+
     s = math.sin(t)
 
     # Slightly reduced hip motion (so others are visible)
@@ -58,14 +67,26 @@ while True:
     right_hip_target = hip_amp * s
     left_hip_target  = -hip_amp * s
 
+
+    # thighs follow hips lightly
+    right_thigh_target = thigh_amp * s
+    left_thigh_target = thigh_amp * s
+
     right_thigh_target = thigh_amp_right * s
     left_thigh_target  = -thigh_amp_left * s
+
 
     right_knee_target = knee_amp_right * max(0.0, s)
     left_knee_target  = knee_amp_left * max(0.0, -s)
 
+
+    # feet compensate a little
+    right_foot_target = -foot_amp * max(0.0, s)
+    left_foot_target = foot_amp * max(0.0, -s)
+
     right_foot_target = -foot_amp_right * max(0.0, s)
     left_foot_target  = -foot_amp_left * max(0.0, -s)
+
 
     # Apply control
     p.setJointMotorControl2(robot, right_hip, p.POSITION_CONTROL, right_hip_target, force=200, maxVelocity=12)
@@ -84,5 +105,9 @@ while True:
     p.stepSimulation()
     time.sleep(1/240)
 
+    t += 0.06
+
+
     # Speed of motion
     t += 0.06
+

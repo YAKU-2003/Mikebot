@@ -2,6 +2,9 @@ import pybullet as p
 import pybullet_data
 import time
 
+# -----------------------------
+# Setup
+# -----------------------------
 p.connect(p.GUI)
 p.setGravity(0, 0, -9.81)
 p.setAdditionalSearchPath(pybullet_data.getDataPath())
@@ -10,12 +13,13 @@ p.loadURDF("plane.urdf")
 
 robot = p.loadURDF(
     r"C:/Users/ykulk/Downloads/simulations/attempt1/simready1.urdf",
-    basePosition=[0, 0, 0.45],
+    basePosition=[0, 0, 0.4],
     useFixedBase=False
 )
 
-time.sleep(1)
-
+# -----------------------------
+# Compute Center of Mass (COM)
+# -----------------------------
 total_mass = 0.0
 weighted_x = 0.0
 weighted_y = 0.0
@@ -49,8 +53,40 @@ com_z = weighted_z / total_mass
 
 print("Total mass:", total_mass)
 print("Center of Mass (COM):")
-print(f"x = {com_x:.4f}, y = {com_y:.4f}, z = {com_z:.4f}")
+print(f"x = {com_x:.4f}")
+print(f"y = {com_y:.4f}")
+print(f"z = {com_z:.4f}")
 
-for _ in range(5000):
+# -----------------------------
+# Visualize COM (blue sphere)
+# -----------------------------
+sphere_radius = 0.03
+
+visual_shape = p.createVisualShape(
+    shapeType=p.GEOM_SPHERE,
+    radius=sphere_radius,
+    rgbaColor=[0, 0, 1, 1]   # BLUE
+)
+
+com_marker = p.createMultiBody(
+    baseMass=0,
+    baseVisualShapeIndex=visual_shape,
+    basePosition=[com_x, com_y, com_z]
+)
+
+# -----------------------------
+# Optional camera
+# -----------------------------
+p.resetDebugVisualizerCamera(
+    cameraDistance=1.6,
+    cameraYaw=50,
+    cameraPitch=-15,
+    cameraTargetPosition=[0, 0, 0.22]
+)
+
+# -----------------------------
+# Keep simulation running
+# -----------------------------
+while True:
     p.stepSimulation()
-    time.sleep(1/240)
+    time.sleep(1 / 240)

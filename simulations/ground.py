@@ -13,7 +13,7 @@ p.loadURDF("plane.urdf")
 # Load robot as a free body
 robot = p.loadURDF(
     r"C:/Users/ykulk/Downloads/simulations/attempt1/simready1.urdf",
-    basePosition=[0, 0, 0.14],
+    basePosition=[0, 0, 0.45],
     useFixedBase=False
 )
 
@@ -43,13 +43,13 @@ left_foot = 15
 
 # Initial crouched pose
 right_hip_init = 0.0
-right_thigh_init = 0.15
-right_knee_init = -0.55
+right_thigh_init = 0.05
+right_knee_init = 0.0
 right_foot_init = 0.0   # foot locked
 
 left_hip_init = 0.0
-left_thigh_init = 0.15
-left_knee_init = -0.55
+left_thigh_init = 0.05
+left_knee_init = 0.0
 left_foot_init = 0.0    # foot locked
 
 # Instantly set initial pose

@@ -197,5 +197,11 @@ for cycle in range(num_cycles):
         hold_pose(target_pose, duration=hold_time, force=260, max_vel=0.8)
         current_pose = target_pose
 
+<<<<<<< Updated upstream
 transition_pose(current_pose, POSE_STAND, duration=1.0, force=260, max_vel=0.8)
 hold_pose(POSE_STAND, 2.0)
+=======
+# Finish in stand pose
+transition_pose(current_pose, POSE_STAND, duration=1.0, force=280, max_vel=1.2)
+hold_pose(POSE_STAND, duration=2.0, force=280, max_vel=1.2)
+>>>>>>> Stashed changes
