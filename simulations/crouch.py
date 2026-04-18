@@ -16,7 +16,7 @@ robot = p.loadURDF(
     useFixedBase=False
 )
 
-# reduce bouncing
+# reduce bounce
 p.changeDynamics(robot, -1, restitution=0.0, lateralFriction=1.0)
 for j in range(p.getNumJoints(robot)):
     p.changeDynamics(robot, j, restitution=0.0, lateralFriction=1.0)
@@ -43,7 +43,6 @@ LEFT_FOOT = 15
 
 # -----------------------------
 # Stable standing pose
-# mirrored signs: right = value, left = -value
 # -----------------------------
 POSE_STAND = {
     "hip": 0.0,
@@ -52,7 +51,7 @@ POSE_STAND = {
     "foot": 0.0
 }
 
-# Final crouch pose from your slider test
+# Final crouch pose from slider
 POSE_CROUCH = {
     "hip": 0.0,
     "thigh": -0.800,
@@ -63,7 +62,7 @@ POSE_CROUCH = {
 # -----------------------------
 # Helpers
 # -----------------------------
-def apply_pose(pose, force_main=1300, force_foot=900, vel_main=5.0, vel_foot=2.5):
+def apply_pose(pose, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0):
     # Right
     p.setJointMotorControl2(robot, RIGHT_HIP, p.POSITION_CONTROL,
                             targetPosition=pose["hip"], force=force_main, maxVelocity=vel_main)
@@ -84,7 +83,7 @@ def apply_pose(pose, force_main=1300, force_foot=900, vel_main=5.0, vel_foot=2.5
     p.setJointMotorControl2(robot, LEFT_FOOT, p.POSITION_CONTROL,
                             targetPosition=-pose["foot"], force=force_foot, maxVelocity=vel_foot)
 
-def hold_pose(pose, duration, force_main=1300, force_foot=900, vel_main=5.0, vel_foot=2.5):
+def hold_pose(pose, duration, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0):
     steps = max(1, int(duration * 240))
     for _ in range(steps):
         apply_pose(pose, force_main, force_foot, vel_main, vel_foot)
@@ -99,7 +98,7 @@ def blend_pose(pose_a, pose_b, alpha):
         "foot":  (1 - alpha) * pose_a["foot"]  + alpha * pose_b["foot"],
     }
 
-def transition_pose(start_pose, end_pose, duration, force_main=1300, force_foot=900, vel_main=5.0, vel_foot=2.5):
+def transition_pose(start_pose, end_pose, duration, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0):
     steps = max(1, int(duration * 240))
     for i in range(steps):
         alpha = (i + 1) / steps
@@ -109,8 +108,8 @@ def transition_pose(start_pose, end_pose, duration, force_main=1300, force_foot=
         time.sleep(1/240)
 
 # -----------------------------
-# Build progressive crouch states
-# knee first, then thigh, repeated
+# Build fine progressive stages
+# knees first, then thighs
 # -----------------------------
 def partial_pose(knee_frac, thigh_frac):
     return {
@@ -120,40 +119,31 @@ def partial_pose(knee_frac, thigh_frac):
         "foot": 0.0
     }
 
-STAGE_1 = partial_pose(knee_frac=0.20, thigh_frac=0.00)
-STAGE_2 = partial_pose(knee_frac=0.20, thigh_frac=0.20)
-STAGE_3 = partial_pose(knee_frac=0.40, thigh_frac=0.20)
-STAGE_4 = partial_pose(knee_frac=0.40, thigh_frac=0.40)
-STAGE_5 = partial_pose(knee_frac=0.60, thigh_frac=0.40)
-STAGE_6 = partial_pose(knee_frac=0.60, thigh_frac=0.60)
-STAGE_7 = partial_pose(knee_frac=0.80, thigh_frac=0.60)
-STAGE_8 = partial_pose(knee_frac=0.80, thigh_frac=0.80)
-STAGE_9 = partial_pose(knee_frac=1.00, thigh_frac=0.80)
-STAGE_10 = partial_pose(knee_frac=1.00, thigh_frac=1.00)
+fractions = [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0]
 
-CROUCH_STAGES = [
-    STAGE_1, STAGE_2, STAGE_3, STAGE_4, STAGE_5,
-    STAGE_6, STAGE_7, STAGE_8, STAGE_9, STAGE_10
-]
+CROUCH_STAGES = []
+for f in fractions:
+    CROUCH_STAGES.append(partial_pose(knee_frac=f, thigh_frac=max(0.0, f - 0.1)))
+    CROUCH_STAGES.append(partial_pose(knee_frac=f, thigh_frac=f))
 
 # -----------------------------
 # Run
 # -----------------------------
-hold_pose(POSE_STAND, 2.5)
+hold_pose(POSE_STAND, 3.0)
 
 while True:
     current = POSE_STAND
 
     print("Progressive crouch down")
     for stage in CROUCH_STAGES:
-        transition_pose(current, stage, duration=0.45, force_main=1350, force_foot=900, vel_main=5.5, vel_foot=2.5)
-        hold_pose(stage, duration=0.18, force_main=1350, force_foot=900, vel_main=5.5, vel_foot=2.5)
+        transition_pose(current, stage, duration=0.32, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0)
+        hold_pose(stage, duration=0.10, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0)
         current = stage
 
-    hold_pose(POSE_CROUCH, 1.0, force_main=1350, force_foot=900, vel_main=5.5, vel_foot=2.5)
+    hold_pose(POSE_CROUCH, 0.8, force_main=1200, force_foot=850, vel_main=4.0, vel_foot=2.0)
 
     print("Return to stand")
-    transition_pose(POSE_CROUCH, POSE_STAND, duration=1.8, force_main=1250, force_foot=900, vel_main=4.5, vel_foot=2.5)
+    transition_pose(POSE_CROUCH, POSE_STAND, duration=2.4, force_main=1100, force_foot=850, vel_main=3.5, vel_foot=2.0)
 
-    # important: longer settle time before repeating
-    hold_pose(POSE_STAND, 2.0, force_main=1250, force_foot=900, vel_main=4.5, vel_foot=2.5)
+    # longer recovery to stop backward wobble
+    hold_pose(POSE_STAND, 3.0, force_main=1100, force_foot=850, vel_main=3.5, vel_foot=2.0)
