@@ -81,9 +81,9 @@ while True:
     p.setJointMotorControl2(robot, RIGHT_HIP, p.POSITION_CONTROL,
                             targetPosition=0.0, force=300, maxVelocity=1.0)
     p.setJointMotorControl2(robot, RIGHT_THIGH, p.POSITION_CONTROL,
-                            targetPosition=right_thigh_cmd, force=300, maxVelocity=1.0)
+                            targetPosition=right_thigh_cmd, force=600, maxVelocity=5.0)
     p.setJointMotorControl2(robot, RIGHT_KNEE, p.POSITION_CONTROL,
-                            targetPosition=right_knee_cmd, force=300, maxVelocity=1.0)
+                            targetPosition=right_knee_cmd, force=600, maxVelocity=5.0)
     p.setJointMotorControl2(robot, RIGHT_FOOT, p.POSITION_CONTROL,
                             targetPosition=0.0, force=500, maxVelocity=1.0)
 
